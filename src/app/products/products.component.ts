@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import {ProductService} from "../services/product.service";
+import {Product} from "../model/product.model";
+import {FormBuilder, FormGroup} from "@angular/forms";
 
 @Component({
   selector: 'app-products',
@@ -8,11 +10,41 @@ import {ProductService} from "../services/product.service";
 })
 export class ProductsComponent implements OnInit {
 
-  products! : Array<any>;
+  products! : Array<Product>;
+  currentPage : number=0;
+  pageSize:number=5;
+  totalPages :number=0;
   errorMessage! : string;
-  constructor(private productService : ProductService ) { }
+  searchFormGroup! : FormGroup;
+  currentAction : String="all";
+
+
+  constructor(private productService : ProductService, private fb :FormBuilder) { }
 
   ngOnInit(): void {
+    this.searchFormGroup= this.fb.group({
+      Keyword : this.fb.control(null)
+    })
+  this.handleGetPageProducts();
+
+  }
+
+
+  handleGetPageProducts(){
+    this.productService.getPageProducts(this.currentPage, this.pageSize).subscribe({
+      next : (data)=>{
+        this.products=data.products;
+        this.totalPages=data.totalPages;
+        console.log(this.totalPages);
+      },
+      error : (err)=>{
+        this.errorMessage=err;
+
+      }
+    });
+  }
+
+  handleGetAllProducts(){
     this.productService.getAllProducts().subscribe({
       next : (data)=>{
         this.products=data;
@@ -22,12 +54,53 @@ export class ProductsComponent implements OnInit {
 
       }
     });
+  }
+  handleDeleteProduct(p: Product) {
+    let conf=confirm("Are you sure ?");
+    if(conf==false) return;
+this.productService.deleteProduct(p.id).subscribe( {
+  next :(data)=>{
+   // this.handleGetAllProducts();
+    let index=this.products.indexOf(p);
+    this.products.splice(index, 1);
+  }
+})
 
   }
 
-  handleDeleteProduct(p: any) {
-    let index = this.products.indexOf(p);
-    this.products.splice(index, 1);
+  handleSetPromotion(p: Product) {
+    let promo=p.promotion;
+    this.productService.setPromotion(p.id).subscribe( {
+      next :(date)=>{
+
+        p.promotion=! promo;
+      },
+      error : err =>{
+        this.errorMessage=err;
+      }
+    })
+
+
+  }
+
+  handleSearchProducts() {
+    this.currentAction="search";
+    this.currentPage=0;
+    let Keyword =this.searchFormGroup.value.Keyword;
+      this.productService.searchProducts(Keyword, this.currentPage, this.pageSize).subscribe({
+        next :(data )=> {
+          this.products = data.products;
+          this.totalPages=data.totalPages;
+        }
+      })
+  }
+
+  gotoPage(i: number) {
+    this.currentPage=i;
+    if(this.currentAction==='all')
+    this.handleGetPageProducts();
+    else
+      this.handleSearchProducts();
 
   }
 }
