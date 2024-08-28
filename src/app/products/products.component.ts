@@ -113,4 +113,9 @@ this.productService.deleteProduct(p.id).subscribe( {
 
 
   }
+
+  handleEditProduct(p:Product) {
+    this.router.navigateByUrl("/admin/editProduct/"+p.id);
+
+  }
 }
